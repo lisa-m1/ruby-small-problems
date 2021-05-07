@@ -4,11 +4,12 @@
 # on a TodoList object, including iteration and selection.
 
 class TodoList
-  attr_accessor :title, :todos
+  attr_accessor :title
+  attr_reader :todos
 
-  def initialize(title)
+  def initialize(title, list = [])
     @title = title
-    @todos = []
+    @todos = list
   end
 
   # rest of class needs implementation
@@ -16,7 +17,6 @@ class TodoList
   def add(item)
     raise TypeError, "Can only add Todo objects" unless item.class == Todo
     todos.push(item)
-    todos
   end
 
   alias_method :<<, :add
@@ -34,7 +34,7 @@ class TodoList
   end
   
   def to_a
-    todos.map(&:title)
+    todos.clone
   end
   
   def done?
@@ -46,11 +46,11 @@ class TodoList
   end
 
   def mark_done_at(index)
-    todos.fetch(index).done!
+    item_at(index).done!
   end
 
   def mark_undone_at(index)
-    todos.fetch(index).undone!
+    item_at(index).undone!
   end
 
   def done!
@@ -66,21 +66,68 @@ class TodoList
   end
 
   def remove_at(index)
-    todos.delete(todos.fetch(index))
+    todos.delete(item_at(index))
   end
 
   def to_s
-    puts "---- Today's Todos ----"
+    puts "---- #{title} ----"
     todos.each do |todo|
       puts todo
     end
   end
+
+  def each
+    index = 0
+    loop do
+      yield(todos[index])
+      index += 1
+      break if index == todos.size
+    end
+    self
+  end
+
+  def select
+    result = []
+    each do |todo|
+      result << todo if yield(todo)
+    end
+    TodoList.new("selected", result)
+  end
+
+  def find_by_title(todo_title)
+    each do |todo|
+      return todo if todo.title == todo_title
+    end
+    nil
+  end
+
+  def all_done
+    select { |todo| todo.done? }
+  end
+
+  def all_not_done
+    select { |todo| !todo.done? } 
+  end
+
+  def mark_done(todo_title)
+    find_by_title(title) && find_by_title(title).done!
+  end
+
+  def mark_all_done
+    each { |todo| todo.done! }
+  end
+
+  def mark_all_undone
+    each { |todo| todo.undone!}
+  end
+  
 end
 
 
 # This class represents a todo item and its associated
 # data: name and description. There's also a "done"
 # flag to show whether this todo item is done.
+
 
 class Todo
   DONE_MARKER = 'X'
@@ -118,22 +165,3 @@ class Todo
 end
 
 
-
-
-
-# ---- Outputting the list -----
-
-# to_s
-list.to_s                      # returns string representation of the list
-
-# ---- Today's Todos ----
-# [ ] Buy milk
-# [ ] Clean room
-# [ ] Go to gym
-
-# or, if any todos are done
-
-# ---- Today's Todos ----
-# [ ] Buy milk
-# [X] Clean room
-# [ ] Go to gym
